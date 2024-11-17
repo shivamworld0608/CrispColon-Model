@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 # Download the model if it doesn't exist
 MODEL_PATH = 'trained.keras'
-MODEL_URL = 'https://your-public-model-url/trained.keras'  # Replace with your actual public URL
+MODEL_URL = 'https://crispcolon-model.onrender.com/trained.keras'  # Your actual public model URL
 if not os.path.exists(MODEL_PATH):
     print("Downloading model...")
     response = requests.get(MODEL_URL)
