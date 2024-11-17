@@ -1,17 +1,35 @@
 from flask import Flask, request, jsonify
 from PIL import Image
 import numpy as np
-import tensorflow as tf  # Replace with torch if using PyTorch
+import tensorflow as tf
 import io
+import os
+import requests
 
 # Initialize Flask app
 app = Flask(__name__)
 
-# Load the trained model
-# Replace 'path/to/your_model' with the actual path to your trained model file.
-model = tf.keras.models.load_model('C:/Users/DELL/OneDrive/Desktop/clg shit/SE Lab/ColonCancerDetection/trained.keras')
+# Download the model if it doesn't exist
+MODEL_PATH = 'trained.keras'
+MODEL_URL = 'https://your-public-model-url/trained.keras'  # Replace with your actual public URL
+if not os.path.exists(MODEL_PATH):
+    print("Downloading model...")
+    response = requests.get(MODEL_URL)
+    with open(MODEL_PATH, 'wb') as f:
+        f.write(response.content)
+    print("Model downloaded successfully.")
 
-# Define a preprocessing function to resize and normalize the image as required by the model
+# Load the trained model
+model = tf.keras.models.load_model(MODEL_PATH)
+
+# Define allowed file extensions
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+
+# Define a function to check if the uploaded file is valid
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# Define a preprocessing function to resize and normalize the image
 def preprocess_image(image, target_size=(224, 224)):  # Replace (224, 224) with your model's input shape
     image = image.resize(target_size)
     image = np.array(image) / 255.0  # Normalize if your model expects normalized input
@@ -21,12 +39,17 @@ def preprocess_image(image, target_size=(224, 224)):  # Replace (224, 224) with 
 # Define the prediction route
 @app.route('/predict', methods=['POST'])
 def predict():
+    # Check if a file was uploaded
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
 
     file = request.files['file']
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
+
+    # Validate the file type
+    if not allowed_file(file.filename):
+        return jsonify({'error': 'Invalid file type. Only PNG, JPG, and JPEG are allowed.'}), 400
 
     try:
         # Read and preprocess the image
@@ -47,4 +70,6 @@ def predict():
 
 # Run the app
 if __name__ == '__main__':
-    app.run(debug=False)
+    # Use PORT from the environment variable or default to 5000
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
